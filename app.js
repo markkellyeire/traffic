@@ -6,18 +6,33 @@ app.get('/', function (req, res) {
    res.send('Hello World');
 })
 
+getCoordinates = function(data) {
+	var coords, json, features;
+
+	json = JSON.parse(data);
+
+	features = json['features'];
+
+	for (var i = 0; i < features.length; i++ ) {
+		coords += features[i]['geometry']['coordinates']
+	}
+
+	return coords;
+}
+
 app.get('/hazards', function (req, res) {
-	var hazards;
+	// var hazards;
 	request('http://data.livetraffic.com/traffic/hazards/roadwork.json', 
 			function (error, response, body) {
 	    if (!error && response.statusCode == 200) {
-	        console.log(body); // Show the HTML for the Modulus homepage.
-	        hazards = body;
+	        hazards = getCoordinates(body);
+	        //console.log('SHITE HAWK DOWN');
 	        res.send(hazards);
 	    } else {
 	    	res.send('Fuck all Hazards Cunt!');
 	    }
 	});
+	//res.send('Test');
    
 })
 
