@@ -1,6 +1,10 @@
 var express = require('express');
 var app = express();
+var http = require('http').Server(app);
 var request = require('request');
+var fs = require('fs');
+var url = 'http://data.livetraffic.com/traffic/hazards/roadwork.json';
+var cacheFile = 'cache.json';
 
 app.get('/', function (req, res) {
    res.send('Hello World');
@@ -26,13 +30,19 @@ app.get('/hazards', function (req, res) {
 			function (error, response, body) {
 	    if (!error && response.statusCode == 200) {
 	        hazards = getCoordinates(body);
-	        //console.log('SHITE HAWK DOWN');
 	        res.send(hazards);
 	    } else {
-	    	res.send('Fuck all Hazards Cunt!');
+	    	res.send('no hazards.');
 	    }
 	});
 	//res.send('Test');
+   
+})
+
+app.get('/test', function (req, res) {
+	// var hazards;
+	
+	res.sendFile(__dirname + '/views/pages/hazard.html');
    
 })
 
