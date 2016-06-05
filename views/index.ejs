@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+     /* * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }*/
+      html, body { height:100%; }
+    </style>
+  </head>
+  <body>
+  test
+  <div id="map" style="height: 100%; width: 100%"></div>
+  egat
+    <ul id="messages"></ul>
+    <form action="">
+    shite
+      <input id="m" autocomplete="off" /><button>Send</button>
+      bag
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?&signed_in=true&callback=window.initMap"></script>
+
+    <script src="/js/markerclusterer.js" type="text/javascript"></script>
+        
+    <script>
+      var socket = io();
+      var pageHazards = [];
+      $('form').submit(function(){
+        socket.emit('send', $('#m').val());
+        $('#m').val('');
+        return false;
+      });
+      // socket.on('hazard', function(msg){
+      //   for (i=0; i < msg.length; i++) {
+      //     $('#messages').append($('<li>').text(msg[i]));
+      //   }
+      // });
+
+      window.initMap = function() {
+        var myLatLng = {lat: -25.363, lng: 131.044};
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 10,
+          center: {lat: -33.9, lng: 151.2}
+        });
+
+        var markers = [],
+            i;
+
+        socket.on('hazard', function(msg){
+          if (msg.length !== pageHazards.length) {
+
+            pageHazards = msg;
+            for (i=0;i<10;i++) {
+              // console.log('Lat: ' + msg);
+              // console.log('Long: ' + msg[i][1]);
+              var latLng = new google.maps.LatLng(msg[i][1],
+                  msg[i][0]);
+              var marker = new google.maps.Marker({
+                position: latLng,
+                title: msg[i][2]
+              });
+              markers.push(marker);
+            }
+
+            var markerCluster = new MarkerClusterer(map, markers);
+          }
+          
+        });
+      }
+    </script>
+
+  </body>
+</html>

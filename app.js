@@ -1,56 +1,102 @@
-var express = require('express');
+var express = require("express");
 var app = express();
-var http = require('http').Server(app);
-var request = require('request');
-var fs = require('fs');
+var port = 3700;
+var routes = require('./controllers/index');
+
+// private variables.
+var http = require('http');
 var url = 'http://data.livetraffic.com/traffic/hazards/roadwork.json';
-var cacheFile = 'cache.json';
+var cacheFile = __dirname + '/cache.json';
+var fs = require('fs');
+var chokidar = require('chokidar');
+var hazardJson = {};
+var safeJson = {};
+var mongoose = require('mongoose');
+var Hazard = require('./app/models/hazard');
 
-app.get('/', function (req, res) {
-   res.send('Hello World');
-})
+app.use('/', routes);
+app.set('views', __dirname + '/views');
+app.set('view engine', 'ejs');
+app.engine('html', require('ejs').renderFile);
 
-getCoordinates = function(data) {
-	var coords, json, features;
+app.use(express.static('public'));
+app.use(express.static('views'));
 
-	json = JSON.parse(data);
+// Todo this is still watching the entire directory
+// It must only watch the cache file
+var watcher = chokidar.watch(cacheFile, {
+	ignored: /[\/\\]\./, persistent: true
+});
 
-	features = json['features'];
+/* prviate functions */
+
+function fetchJson() {
+	http.get(url, function(res) {
+	    body = '';
+
+	    res.on('data', function(data) {
+	    	
+	        body += data;
+	    });
+
+	    res.on('end', function() {
+
+	    	fs.writeFileSync(cacheFile, body);
+	    		
+	        setTimeout(fetchJson, 100000); // Fetch it again in a second
+	    });
+	});
+}
+
+function getCoordinatesAndTitle(data) {
+	var coords = [],
+		features;
+
+	try {
+    	hazardJson = JSON.parse(data);
+    	safeJson = hazardJson;
+  	} catch (e) {
+  		hazardJson = safeJson;
+    	console.error(e);
+  	}
+
+	features = hazardJson['features'];
 
 	for (var i = 0; i < features.length; i++ ) {
-		coords += features[i]['geometry']['coordinates']
+		features[i]['geometry']['coordinates'].push(features[i]['properties']['headline']);
+		coords.push(features[i]['geometry']['coordinates']);
 	}
 
 	return coords;
 }
 
-app.get('/hazards', function (req, res) {
-	// var hazards;
-	request('http://data.livetraffic.com/traffic/hazards/roadwork.json', 
-			function (error, response, body) {
-	    if (!error && response.statusCode == 200) {
-	        hazards = getCoordinates(body);
-	        res.send(hazards);
-	    } else {
-	    	res.send('no hazards.');
-	    }
+/* End prviate functions */
+
+// Pass the express server to sockets io
+var io = require('socket.io').listen(app.listen(port));
+
+// When a connection is establish execute...
+io.sockets.on('connection', function (socket) {
+ 	
+    fetchJson();
+
+    watcher.add(cacheFile);
+
+    watcher.on('change', function(cacheFile) {
+
+		fs.readFile(cacheFile, 'utf8', function (err, data) {
+			var coordinates = [];
+			if (err) throw err;
+			
+			// Format the hazards array for plotting
+			coordinates = getCoordinatesAndTitle(data);
+			socket.emit('hazard', coordinates);
+			
+		});
+		
 	});
-	//res.send('Test');
-   
-})
+});
 
-app.get('/test', function (req, res) {
-	// var hazards;
-	
-	res.sendFile(__dirname + '/views/pages/hazard.html');
-   
-})
-
-var server = app.listen(8081, function () {
-
-  var host = server.address().address
-  var port = server.address().port
-
-  console.log("Example app listening at http://%s:%s", host, port)
-
-})
+process.on('uncaughtException', (err) => {
+  console.log('Caught exception:' + err);
+});
