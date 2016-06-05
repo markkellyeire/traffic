@@ -39,6 +39,7 @@
         $('#m').val('');
         return false;
       });
+
       // socket.on('hazard', function(msg){
       //   for (i=0; i < msg.length; i++) {
       //     $('#messages').append($('<li>').text(msg[i]));
@@ -55,7 +56,6 @@
 
         var markers = [],
             i;
-
         socket.on('hazard', function(msg){
           if (msg.length !== pageHazards.length) {
 
